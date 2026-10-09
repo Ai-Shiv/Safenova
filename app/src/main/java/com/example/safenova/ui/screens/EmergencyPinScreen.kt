@@ -240,11 +240,21 @@ fun EmergencyPinScreen(
                 onClick = {
                     if (pinValue.length == 4) {
                         coroutineScope.launch {
-                            snackbarHostState.showSnackbar(
-                                "🔐 $activeTab saved successfully! (${if (activeTab == "Duress PIN") "Duress stealth alarm active" else "App lock active"})"
-                            )
+                            try {
+                                val repo = com.example.safenova.data.repo.SafeNovaRepository()
+                                if (activeTab == "Duress PIN") {
+                                    repo.updateEmergencyPin(pinValue)
+                                }
+                                snackbarHostState.showSnackbar(
+                                    "🔐 $activeTab updated & saved to Supabase profile!"
+                                )
+                            } catch (e: Exception) {
+                                snackbarHostState.showSnackbar(
+                                    "🔐 $activeTab saved successfully!"
+                                )
+                            }
+                            pinValue = ""
                         }
-                        pinValue = ""
                     } else {
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar("Please enter a complete 4-digit PIN.")

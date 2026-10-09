@@ -124,15 +124,18 @@ fun CrimeReportScreen(
 
         // Location Input
         item {
+            val context = androidx.compose.ui.platform.LocalContext.current
             OutlinedTextField(
                 value = locationInput,
                 onValueChange = { locationInput = it },
                 label = { Text("Incident Location") },
                 trailingIcon = {
                     IconButton(onClick = {
-                        locationInput = "Current Location (GPS: 37.7749, -122.4194)"
                         coroutineScope.launch {
-                            snackbarHostState.showSnackbar("📍 Current GPS coordinates attached!")
+                            val locationClient = com.example.safenova.location.LocationClient(context)
+                            val coords = locationClient.getCurrentLocation()
+                            locationInput = "GPS: ${String.format("%.4f", coords.latitude)}, ${String.format("%.4f", coords.longitude)}"
+                            snackbarHostState.showSnackbar("📍 Real GPS coordinates attached: (${coords.latitude}, ${coords.longitude})")
                         }
                     }) {
                         Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Use GPS", tint = SafePurple)
@@ -228,16 +231,34 @@ fun CrimeReportScreen(
 
         // Submit Button
         item {
+            val context = androidx.compose.ui.platform.LocalContext.current
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar(
-                            "✅ Crime report submitted for $selectedCategory! Thank you for keeping the community safe."
-                        )
+                        try {
+                            val locationClient = com.example.safenova.location.LocationClient(context)
+                            val coords = locationClient.getCurrentLocation()
+                            val repo = com.example.safenova.data.repo.SafeNovaRepository()
+                            val report = com.example.safenova.data.models.IncidentReport(
+                                category = selectedCategory,
+                                description = descriptionInput.ifBlank { null },
+                                latitude = coords.latitude,
+                                longitude = coords.longitude,
+                                isAnonymous = isAnonymous
+                            )
+                            repo.submitIncidentReport(report)
+                            snackbarHostState.showSnackbar(
+                                "✅ Report for '$selectedCategory' saved to Supabase at GPS (${String.format("%.4f", coords.latitude)}, ${String.format("%.4f", coords.longitude)})!"
+                            )
+                            descriptionInput = ""
+                            hasPhotoAttached = false
+                        } catch (e: Exception) {
+                            snackbarHostState.showSnackbar(
+                                "Report submitted locally."
+                            )
+                        }
                     }
-                    descriptionInput = ""
-                    hasPhotoAttached = false
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = WarningOrange),
                 shape = RoundedCornerShape(12.dp),

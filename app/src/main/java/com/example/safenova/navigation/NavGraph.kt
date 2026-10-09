@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -16,18 +17,26 @@ import androidx.navigation.compose.rememberNavController
 import com.example.safenova.ui.components.SafeNovaBottomBar
 import com.example.safenova.ui.components.SafeNovaTopBar
 import com.example.safenova.ui.screens.AreaConditionsScreen
+import com.example.safenova.ui.screens.AuthViewModel
 import com.example.safenova.ui.screens.CrimeReportScreen
 import com.example.safenova.ui.screens.EmergencyPinScreen
 import com.example.safenova.ui.screens.EscortRideScreen
 import com.example.safenova.ui.screens.FindSheltersScreen
 import com.example.safenova.ui.screens.HomeScreen
+import com.example.safenova.ui.screens.LoginScreen
 import com.example.safenova.ui.screens.SettingsScreen
 import com.example.safenova.ui.screens.SosScreen
 
 @Composable
 fun SafeNovaNavGraph(
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    authViewModel: AuthViewModel = viewModel()
 ) {
+    if (!authViewModel.isAuthenticated) {
+        LoginScreen(vm = authViewModel)
+        return
+    }
+
     val snackbarHostState = remember { SnackbarHostState() }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
@@ -89,7 +98,10 @@ fun SafeNovaNavGraph(
             }
 
             composable(Screen.Settings.route) {
-                SettingsScreen(snackbarHostState = snackbarHostState)
+                SettingsScreen(
+                    snackbarHostState = snackbarHostState,
+                    onSignOut = { authViewModel.signOut() }
+                )
             }
 
             composable(Screen.CrimeReport.route) {

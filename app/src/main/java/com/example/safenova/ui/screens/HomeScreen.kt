@@ -118,6 +118,63 @@ fun HomeScreen(
             }
         }
 
+        // AI Risk Prediction Card
+        item {
+            val aiEngine = androidx.compose.runtime.remember { com.example.safenova.ai.AiSafetyEngine() }
+            val risk = androidx.compose.runtime.remember {
+                aiEngine.calculateRiskScore(
+                    latitude = 37.7749,
+                    longitude = -122.4194,
+                    recentIncidents = emptyList<com.example.safenova.data.models.IncidentReport>(),
+                    areaConditions = emptyList<com.example.safenova.data.models.AreaCondition>(),
+                    nearbySafePlaces = emptyList<com.example.safenova.data.models.SafePlace>()
+                )
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = SafePurple.copy(alpha = 0.12f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Shield, contentDescription = "AI Risk", tint = SafePurple)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "AI Route & Safety Score", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = SafeGreen.copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                text = "${risk.riskLevel} (${risk.safetyScore}/100)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SafeGreen,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = risk.summary,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
         // Emergency SOS Hero Card
         item {
             Card(

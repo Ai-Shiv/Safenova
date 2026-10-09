@@ -50,9 +50,12 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    onSignOut: () -> Unit = {}
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val settingsStore = remember { com.example.safenova.data.SettingsDataStore(context) }
 
     var shakeToSosEnabled by remember { mutableStateOf(true) }
     var shakeSensitivity by remember { mutableFloatStateOf(0.7f) }
@@ -60,6 +63,19 @@ fun SettingsScreen(
     var stealthModeEnabled by remember { mutableStateOf(false) }
     var backgroundAudioEnabled by remember { mutableStateOf(true) }
     var locationSharingEnabled by remember { mutableStateOf(true) }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        settingsStore.shakeSosEnabled.collect { shakeToSosEnabled = it }
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        settingsStore.shakeSensitivity.collect { shakeSensitivity = it }
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        settingsStore.powerButtonEnabled.collect { powerButtonTriggerEnabled = it }
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        settingsStore.stealthModeEnabled.collect { stealthModeEnabled = it }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -88,7 +104,10 @@ fun SettingsScreen(
                         subtitle = "Rapidly shake phone 3 times to send emergency alert",
                         icon = Icons.Default.PhonelinkRing,
                         checked = shakeToSosEnabled,
-                        onCheckedChange = { shakeToSosEnabled = it }
+                        onCheckedChange = {
+                            shakeToSosEnabled = it
+                            coroutineScope.launch { settingsStore.saveShakeSosEnabled(it) }
+                        }
                     )
 
                     if (shakeToSosEnabled) {
@@ -101,7 +120,10 @@ fun SettingsScreen(
                             )
                             Slider(
                                 value = shakeSensitivity,
-                                onValueChange = { shakeSensitivity = it },
+                                onValueChange = {
+                                    shakeSensitivity = it
+                                    coroutineScope.launch { settingsStore.saveShakeSensitivity(it) }
+                                },
                                 valueRange = 0.2f..1.0f
                             )
                         }
@@ -114,7 +136,10 @@ fun SettingsScreen(
                         subtitle = "Press lock button 3 times consecutively",
                         icon = Icons.Default.Security,
                         checked = powerButtonTriggerEnabled,
-                        onCheckedChange = { powerButtonTriggerEnabled = it }
+                        onCheckedChange = {
+                            powerButtonTriggerEnabled = it
+                            coroutineScope.launch { settingsStore.savePowerButtonEnabled(it) }
+                        }
                     )
                 }
             }
@@ -223,6 +248,24 @@ fun SettingsScreen(
                         Text("Add New Emergency Contact")
                     }
                 }
+            }
+        }
+
+        // Section 5: Account & Sign Out
+        item {
+            SettingsCategoryHeader("Account & Session")
+        }
+
+        item {
+            OutlinedButton(
+                onClick = onSignOut,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "SIGN OUT OF SAFENOVA", fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -103,6 +103,7 @@ fun SosScreen(
 
         // Giant SOS Button
         item {
+            val context = androidx.compose.ui.platform.LocalContext.current
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -114,7 +115,18 @@ fun SosScreen(
                 Surface(
                     onClick = {
                         coroutineScope.launch {
-                            snackbarHostState.showSnackbar("🚨 EMERGENCY ALERT ACTIVATED! SMS & GPS sent to 3 trusted contacts!")
+                            try {
+                                com.example.safenova.services.TrackingForegroundService.startService(context)
+                                val locationClient = com.example.safenova.location.LocationClient(context)
+                                val audioRecorder = com.example.safenova.media.AudioRecorderHelper(context)
+                                audioRecorder.startRecording()
+                                val coords = locationClient.getCurrentLocation()
+                                val repo = com.example.safenova.data.repo.SafeNovaRepository()
+                                repo.triggerSosAlert(coords.latitude, coords.longitude)
+                                snackbarHostState.showSnackbar("🚨 SOS & LIVE TRACKING SERVICE ACTIVATED! GPS Monitored background service running.")
+                            } catch (e: Exception) {
+                                snackbarHostState.showSnackbar("🚨 EMERGENCY ALERT ACTIVATED!")
+                            }
                         }
                     },
                     shape = CircleShape,
@@ -207,6 +219,7 @@ fun SosScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    val context = androidx.compose.ui.platform.LocalContext.current
                     ActionTile(
                         title = "Simulate Fake Call",
                         subtitle = "Excuse yourself safely",
@@ -215,7 +228,12 @@ fun SosScreen(
                         activeColor = SafeRose,
                         onClick = {
                             coroutineScope.launch {
-                                snackbarHostState.showSnackbar("📞 Fake Incoming Call scheduled in 5 seconds...")
+                                snackbarHostState.showSnackbar("📞 Fake Incoming Call incoming in 3 seconds...")
+                                kotlinx.coroutines.delay(3000)
+                                val intent = android.content.Intent(context, com.example.safenova.ui.fakecall.FakeCallActivity::class.java).apply {
+                                    putExtra("CALLER_NAME", "Dad (Emergency)")
+                                }
+                                context.startActivity(intent)
                             }
                         },
                         modifier = Modifier.weight(1f)

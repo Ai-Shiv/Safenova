@@ -74,35 +74,59 @@ fun FindSheltersScreen(
 
     val filters = listOf("All Shelters", "24/7 Open", "Verified Only", "Emergency Beds")
 
-    val shelters = listOf(
-        ShelterInfo(
-            name = "Grace Women's Refuge Center",
-            address = "142 Maple St, Downtown",
-            distance = "0.8 km",
-            openHours = "Open 24/7",
-            availableBeds = "12 Emergency Beds Free",
-            isVerified = true,
-            phone = "+1 (555) 321-9876"
-        ),
-        ShelterInfo(
-            name = "St. Mary Family & Women Sanctuary",
-            address = "89 Oak Avenue, Westside",
-            distance = "1.6 km",
-            openHours = "Open 24/7",
-            availableBeds = "8 Beds Free",
-            isVerified = true,
-            phone = "+1 (555) 888-2345"
-        ),
-        ShelterInfo(
-            name = "Hope Haven Emergency Shelter",
-            address = "305 Pine Boulevard, North District",
-            distance = "2.9 km",
-            openHours = "6:00 PM - 8:00 AM",
-            availableBeds = "15 Beds Free",
-            isVerified = true,
-            phone = "+1 (555) 777-5432"
+    var sheltersState by remember {
+        mutableStateOf(
+            listOf(
+                ShelterInfo(
+                    name = "Grace Women's Refuge Center",
+                    address = "142 Maple St, Downtown",
+                    distance = "0.8 km",
+                    openHours = "Open 24/7",
+                    availableBeds = "12 Emergency Beds Free",
+                    isVerified = true,
+                    phone = "+1 (555) 321-9876"
+                ),
+                ShelterInfo(
+                    name = "St. Mary Family & Women Sanctuary",
+                    address = "89 Oak Avenue, Westside",
+                    distance = "1.6 km",
+                    openHours = "Open 24/7",
+                    availableBeds = "8 Beds Free",
+                    isVerified = true,
+                    phone = "+1 (555) 888-2345"
+                ),
+                ShelterInfo(
+                    name = "Hope Haven Emergency Shelter",
+                    address = "305 Pine Boulevard, North District",
+                    distance = "2.9 km",
+                    openHours = "6:00 PM - 8:00 AM",
+                    availableBeds = "15 Beds Free",
+                    isVerified = true,
+                    phone = "+1 (555) 777-5432"
+                )
+            )
         )
-    )
+    }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        try {
+            val repo = com.example.safenova.data.repo.SafeNovaRepository()
+            val remotePlaces = repo.fetchSafePlaces()
+            if (remotePlaces.isNotEmpty()) {
+                sheltersState = remotePlaces.map { place ->
+                    ShelterInfo(
+                        name = place.name,
+                        address = place.address,
+                        distance = "0.5 km",
+                        openHours = place.openHours ?: "Open 24/7",
+                        availableBeds = "Verified Safe Place",
+                        isVerified = place.isVerified,
+                        phone = place.phone ?: "+1 (800) 555-SAFE"
+                    )
+                }
+            }
+        } catch (_: Exception) {}
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -198,7 +222,7 @@ fun FindSheltersScreen(
         // Shelters List Header
         item {
             Text(
-                text = "Nearby Shelters (${shelters.size} Found)",
+                text = "Nearby Shelters (${sheltersState.size} Found)",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -208,7 +232,7 @@ fun FindSheltersScreen(
         // Shelter Cards
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                shelters.forEach { shelter ->
+                sheltersState.forEach { shelter ->
                     ShelterCard(
                         shelter = shelter,
                         onCallClick = {
