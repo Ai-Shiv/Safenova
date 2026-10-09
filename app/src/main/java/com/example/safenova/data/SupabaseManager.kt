@@ -11,7 +11,7 @@ object SupabaseManager {
     const val SUPABASE_URL = "https://wjtyegbvqubxtujruifo.supabase.co"
     
     // Replace with your Supabase Anon API Key from Dashboard -> Settings -> API
-    const val SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY_HERE"
+    const val SUPABASE_KEY = "sb_secret_mUiFKY4jzLb0LSDkck1GDw_8x-gCVVy"
 
     val client by lazy {
         createSupabaseClient(
