@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Home : Screen("home", "Home", Icons.Default.Home)
+    object Splash : Screen("splash", "Welcome", Icons.Default.Home)
+    object CheckInSetup : Screen("checkin_setup", "Check-In Setup", Icons.Default.Lock)
     object Map : Screen("map", "Map & Routes", Icons.Default.Map)
     object Sos : Screen("sos", "SOS Panel", Icons.Default.Warning)
     object TrustedContacts : Screen("trusted_contacts", "Contacts", Icons.Default.People)

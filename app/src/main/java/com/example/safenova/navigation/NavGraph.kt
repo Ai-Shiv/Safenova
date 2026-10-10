@@ -56,6 +56,7 @@ fun SafeNovaNavGraph(
         Screen.EscortRide.route -> Screen.EscortRide.title
         Screen.EmergencyPin.route -> Screen.EmergencyPin.title
         Screen.EmergencyProfile.route -> Screen.EmergencyProfile.title
+        Screen.CheckInSetup.route -> "Auto Check-In & Timer"
         else -> "SAFENOVA"
     }
 
@@ -171,6 +172,13 @@ fun SafeNovaNavGraph(
 
             composable(Screen.EmergencyPin.route) {
                 EmergencyPinScreen(snackbarHostState = snackbarHostState)
+            }
+
+            composable(Screen.CheckInSetup.route) {
+                com.example.safenova.ui.screens.CheckInSetupScreen(
+                    snackbarHostState = snackbarHostState,
+                    onJourneyStarted = { navController.navigate(Screen.Map.route) }
+                )
             }
         }
     }
