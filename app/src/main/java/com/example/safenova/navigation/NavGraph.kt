@@ -122,10 +122,9 @@ fun SafeNovaNavGraph(
             }
 
             composable(Screen.Map.route) {
-                MapScreen(
+                com.example.safenova.ui.screens.GoogleMapScreen(
                     snackbarHostState = snackbarHostState,
-                    onNavigateToReport = { navController.navigate(Screen.CrimeReport.route) },
-                    onNavigateToSos = { navController.navigate(Screen.Sos.route) }
+                    onNavigateToReport = { navController.navigate(Screen.CrimeReport.route) }
                 )
             }
 
