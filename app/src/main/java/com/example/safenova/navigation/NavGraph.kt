@@ -20,12 +20,15 @@ import com.example.safenova.ui.screens.AreaConditionsScreen
 import com.example.safenova.ui.screens.AuthViewModel
 import com.example.safenova.ui.screens.CrimeReportScreen
 import com.example.safenova.ui.screens.EmergencyPinScreen
+import com.example.safenova.ui.screens.EmergencyProfileScreen
 import com.example.safenova.ui.screens.EscortRideScreen
 import com.example.safenova.ui.screens.FindSheltersScreen
 import com.example.safenova.ui.screens.HomeScreen
 import com.example.safenova.ui.screens.LoginScreen
+import com.example.safenova.ui.screens.MapScreen
 import com.example.safenova.ui.screens.SettingsScreen
 import com.example.safenova.ui.screens.SosScreen
+import com.example.safenova.ui.screens.TrustedContactsScreen
 
 @Composable
 fun SafeNovaNavGraph(
@@ -42,27 +45,49 @@ fun SafeNovaNavGraph(
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
     val currentScreenTitle = when (currentRoute) {
-        Screen.Home.route -> Screen.Home.title
+        Screen.Home.route -> "SAFENOVA"
+        Screen.Map.route -> Screen.Map.title
         Screen.Sos.route -> Screen.Sos.title
+        Screen.TrustedContacts.route -> "Trusted Contacts"
+        Screen.FindShelters.route -> "Nearby Help & Safe Stays"
         Screen.Settings.route -> Screen.Settings.title
         Screen.CrimeReport.route -> Screen.CrimeReport.title
         Screen.AreaConditions.route -> Screen.AreaConditions.title
-        Screen.FindShelters.route -> Screen.FindShelters.title
         Screen.EscortRide.route -> Screen.EscortRide.title
         Screen.EmergencyPin.route -> Screen.EmergencyPin.title
         Screen.EmergencyProfile.route -> Screen.EmergencyProfile.title
-        Screen.Map.route -> Screen.Map.title
-        else -> "SafeNova"
+        else -> "SAFENOVA"
     }
 
-    val canNavigateBack = currentRoute != Screen.Home.route
+    val rootRoutes = setOf(
+        Screen.Home.route,
+        Screen.Map.route,
+        Screen.Sos.route,
+        Screen.TrustedContacts.route,
+        Screen.FindShelters.route
+    )
+    val canNavigateBack = currentRoute !in rootRoutes
 
     Scaffold(
         topBar = {
             SafeNovaTopBar(
                 title = currentScreenTitle,
                 canNavigateBack = canNavigateBack,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onQuickSos = {
+                    if (currentRoute != Screen.Sos.route) {
+                        navController.navigate(Screen.Sos.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                },
+                onOpenSettings = {
+                    if (currentRoute != Screen.Settings.route) {
+                        navController.navigate(Screen.Settings.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                }
             )
         },
         bottomBar = {
@@ -95,20 +120,41 @@ fun SafeNovaNavGraph(
                 )
             }
 
+            composable(Screen.Map.route) {
+                MapScreen(
+                    snackbarHostState = snackbarHostState,
+                    onNavigateToReport = { navController.navigate(Screen.CrimeReport.route) },
+                    onNavigateToSos = { navController.navigate(Screen.Sos.route) }
+                )
+            }
+
             composable(Screen.Sos.route) {
-                SosScreen(snackbarHostState = snackbarHostState)
+                SosScreen(
+                    snackbarHostState = snackbarHostState,
+                    onNavigateToContacts = { navController.navigate(Screen.TrustedContacts.route) }
+                )
+            }
+
+            composable(Screen.TrustedContacts.route) {
+                TrustedContactsScreen(snackbarHostState = snackbarHostState)
+            }
+
+            composable(Screen.FindShelters.route) {
+                FindSheltersScreen(snackbarHostState = snackbarHostState)
             }
 
             composable(Screen.Settings.route) {
                 SettingsScreen(
                     snackbarHostState = snackbarHostState,
                     onSignOut = { authViewModel.signOut() },
-                    onNavigateToProfile = { navController.navigate(Screen.EmergencyProfile.route) }
+                    onNavigateToProfile = { navController.navigate(Screen.EmergencyProfile.route) },
+                    onNavigateToContacts = { navController.navigate(Screen.TrustedContacts.route) },
+                    onNavigateToPin = { navController.navigate(Screen.EmergencyPin.route) }
                 )
             }
 
             composable(Screen.EmergencyProfile.route) {
-                com.example.safenova.ui.screens.EmergencyProfileScreen(snackbarHostState = snackbarHostState)
+                EmergencyProfileScreen(snackbarHostState = snackbarHostState)
             }
 
             composable(Screen.CrimeReport.route) {
@@ -119,20 +165,12 @@ fun SafeNovaNavGraph(
                 AreaConditionsScreen(snackbarHostState = snackbarHostState)
             }
 
-            composable(Screen.FindShelters.route) {
-                FindSheltersScreen(snackbarHostState = snackbarHostState)
-            }
-
             composable(Screen.EscortRide.route) {
                 EscortRideScreen(snackbarHostState = snackbarHostState)
             }
 
             composable(Screen.EmergencyPin.route) {
                 EmergencyPinScreen(snackbarHostState = snackbarHostState)
-            }
-
-            composable(Screen.Map.route) {
-                com.example.safenova.ui.screens.MapScreen(snackbarHostState = snackbarHostState)
             }
         }
     }

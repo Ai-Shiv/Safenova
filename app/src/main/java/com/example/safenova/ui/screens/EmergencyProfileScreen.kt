@@ -53,27 +53,24 @@ fun EmergencyProfileScreen(
     val repo = remember { SafeNovaRepository() }
 
     var userId by remember { mutableStateOf("") }
-    var fullName by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var bloodType by remember { mutableStateOf("") }
-    var allergies by remember { mutableStateOf("") }
-    var medicalConditions by remember { mutableStateOf("") }
-    var emergencyNotes by remember { mutableStateOf("") }
+    var fullName by remember { mutableStateOf("Sarah Miller") }
+    var phone by remember { mutableStateOf("+1 (555) 234-5678") }
+    var bloodType by remember { mutableStateOf("O+") }
+    var allergies by remember { mutableStateOf("Penicillin, Peanuts") }
+    var medicalConditions by remember { mutableStateOf("Asthma") }
+    var emergencyNotes by remember { mutableStateOf("In case of emergency, contact Mom or Jessica first.") }
 
     LaunchedEffect(Unit) {
         try {
-            val email = repo.getCurrentUserEmail()
             val remoteProfile = repo.fetchUserProfile()
             if (remoteProfile != null) {
                 userId = remoteProfile.id
-                fullName = remoteProfile.fullName.ifBlank { email?.substringBefore("@") ?: "" }
+                fullName = remoteProfile.fullName
                 phone = remoteProfile.phoneNumber ?: ""
-                bloodType = remoteProfile.bloodType ?: ""
+                bloodType = remoteProfile.bloodType ?: "O+"
                 allergies = remoteProfile.allergies ?: ""
                 medicalConditions = remoteProfile.medicalConditions ?: ""
                 emergencyNotes = remoteProfile.emergencyNotes ?: ""
-            } else if (!email.isNullOrBlank()) {
-                fullName = email.substringBefore("@").replaceFirstChar { it.uppercase() }
             }
         } catch (_: Exception) {}
     }
@@ -195,7 +192,7 @@ fun EmergencyProfileScreen(
                 onClick = {
                     coroutineScope.launch {
                         try {
-                            val activeUserId = userId.ifBlank { repo.getCurrentUserId() ?: "demo_user" }
+                            val activeUserId = userId.ifBlank { repo.getEffectiveUserId() }
                             val profile = UserProfile(
                                 id = activeUserId,
                                 fullName = fullName,

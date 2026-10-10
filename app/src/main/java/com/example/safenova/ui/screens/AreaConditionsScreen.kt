@@ -242,24 +242,26 @@ fun AreaConditionsScreen(
 
         // Submit Button
         item {
+            val context = androidx.compose.ui.platform.LocalContext.current
             Button(
                 onClick = {
                     coroutineScope.launch {
                         try {
+                            val coords = com.example.safenova.location.LocationClient(context).getCurrentLocation()
                             val repo = com.example.safenova.data.repo.SafeNovaRepository()
-                            val userId = repo.getCurrentUserId() ?: "anon"
+                            val userId = repo.getEffectiveUserId()
                             val condition = com.example.safenova.data.models.AreaCondition(
                                 reporterId = userId,
                                 lightingRating = lightingSelected,
                                 crowdRating = crowdSelected,
                                 securityPresence = securitySelected,
-                                latitude = 37.7749,
-                                longitude = -122.4194
+                                latitude = coords.latitude,
+                                longitude = coords.longitude
                             )
                             repo.submitAreaCondition(condition)
-                            snackbarHostState.showSnackbar("🌐 Area condition saved to Supabase! Rating updated.")
+                            snackbarHostState.showSnackbar("🌐 Area condition saved to Supabase at (${coords.formatted()})!")
                         } catch (e: Exception) {
-                            snackbarHostState.showSnackbar("🌐 Area condition report submitted! Rating updated for Downtown Central.")
+                            snackbarHostState.showSnackbar("🌐 Area condition report submitted!")
                         }
                     }
                 },

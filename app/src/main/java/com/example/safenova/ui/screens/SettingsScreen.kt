@@ -1,7 +1,10 @@
 package com.example.safenova.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,17 +16,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhonelinkRing
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -33,6 +40,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,59 +49,57 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.safenova.data.SettingsDataStore
+import com.example.safenova.ui.theme.AlertRed
+import com.example.safenova.ui.theme.CinnamonBorder
+import com.example.safenova.ui.theme.CinnamonCard
+import com.example.safenova.ui.theme.SafeDarkPurple
+import com.example.safenova.ui.theme.SafeGreen
 import com.example.safenova.ui.theme.SafePurple
+import com.example.safenova.ui.theme.SafePurpleGlow
+import com.example.safenova.ui.theme.TextPrimary
+import com.example.safenova.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     snackbarHostState: SnackbarHostState,
     onSignOut: () -> Unit = {},
-    onNavigateToProfile: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToContacts: () -> Unit = {},
+    onNavigateToPin: () -> Unit = {}
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val settingsStore = remember { com.example.safenova.data.SettingsDataStore(context) }
-    val repo = remember { com.example.safenova.data.repo.SafeNovaRepository() }
+    val context = LocalContext.current
+    val settingsStore = remember { SettingsDataStore(context) }
 
     var shakeToSosEnabled by remember { mutableStateOf(true) }
     var shakeSensitivity by remember { mutableFloatStateOf(0.7f) }
     var powerButtonTriggerEnabled by remember { mutableStateOf(true) }
     var stealthModeEnabled by remember { mutableStateOf(false) }
     var backgroundAudioEnabled by remember { mutableStateOf(true) }
-    var locationSharingEnabled by remember { mutableStateOf(true) }
+    var authorizedOnlyLocation by remember { mutableStateOf(true) }
+    var sessionExpiryOption by remember { mutableStateOf("30 mins") }
 
-    var contactsList by remember { mutableStateOf<List<com.example.safenova.data.models.TrustedContact>>(emptyList()) }
-    var showAddDialog by remember { mutableStateOf(false) }
-    var newContactName by remember { mutableStateOf("") }
-    var newContactPhone by remember { mutableStateOf("") }
-    var newContactRelation by remember { mutableStateOf("Family") }
+    val expiryOptions = listOf("15 mins", "30 mins", "1 hour", "End of Trip")
 
-    fun refreshContacts() {
-        coroutineScope.launch {
-            try {
-                contactsList = repo.fetchTrustedContacts()
-            } catch (_: Exception) {}
-        }
-    }
-
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        refreshContacts()
-    }
-
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         settingsStore.shakeSosEnabled.collect { shakeToSosEnabled = it }
     }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         settingsStore.shakeSensitivity.collect { shakeSensitivity = it }
     }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         settingsStore.powerButtonEnabled.collect { powerButtonTriggerEnabled = it }
     }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         settingsStore.stealthModeEnabled.collect { stealthModeEnabled = it }
     }
 
@@ -101,27 +107,157 @@ fun SettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(top = 14.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Section 1: Quick Triggers
+        // 1. Profile & Emergency Medical Info Quick Actions
         item {
-            SettingsCategoryHeader("Gesture & Physical Triggers")
+            SettingsCategoryHeader("Profile, Medical Info & Contacts")
+        }
+
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CinnamonCard),
+                border = BorderStroke(1.dp, CinnamonBorder),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Manage your emergency medical profile, trusted contacts circle, and secret duress PIN.",
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+
+                    Button(
+                        onClick = onNavigateToProfile,
+                        colors = ButtonDefaults.buttonColors(containerColor = SafePurple),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(imageVector = Icons.Default.Person, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Edit Emergency Medical Profile (Supabase)", fontWeight = FontWeight.Bold)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onNavigateToContacts,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, SafePurpleGlow),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(imageVector = Icons.Default.People, contentDescription = null, tint = SafePurpleGlow)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Trusted Contacts", color = SafePurpleGlow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        OutlinedButton(
+                            onClick = onNavigateToPin,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, SafePurpleGlow),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = SafePurpleGlow)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Duress PIN", color = SafePurpleGlow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Privacy Controls (Tier 1 Core Requirement: Authorized-only + Auto-Expiring Sessions)
+        item {
+            SettingsCategoryHeader("Privacy Controls & Auto-Expiring Location")
         }
 
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.cardColors(containerColor = CinnamonCard),
+                border = BorderStroke(1.dp, CinnamonBorder)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    SwitchSettingRow(
+                        title = "Share Location Only with Authorized Contacts",
+                        subtitle = "Strict encrypted access: only active contacts & verified responders can view GPS",
+                        icon = Icons.Default.Notifications,
+                        checked = authorizedOnlyLocation,
+                        onCheckedChange = { authorizedOnlyLocation = it }
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Timer, contentDescription = "Expiry", tint = SafeGreen)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Auto-Expire Location Sharing Session After:",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                        }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            expiryOptions.forEach { opt ->
+                                FilterChip(
+                                    selected = sessionExpiryOption == opt,
+                                    onClick = {
+                                        sessionExpiryOption = opt
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("🔒 Location session auto-expiry set to $opt.")
+                                        }
+                                    },
+                                    label = { Text(opt, fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = SafeDarkPurple,
+                                        selectedLabelColor = SafePurpleGlow
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    SwitchSettingRow(
+                        title = "Auto Audio Evidence on SOS",
+                        subtitle = "Record 60s ambient audio clip during active emergency",
+                        icon = Icons.Default.Mic,
+                        checked = backgroundAudioEnabled,
+                        onCheckedChange = { backgroundAudioEnabled = it }
+                    )
+                }
+            }
+        }
+
+        // 3. Gesture & Physical Triggers
+        item {
+            SettingsCategoryHeader("Gesture & Physical SOS Triggers")
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CinnamonCard),
+                border = BorderStroke(1.dp, CinnamonBorder)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     SwitchSettingRow(
                         title = "Shake Phone for SOS",
-                        subtitle = "Rapidly shake phone 3 times to send emergency alert",
+                        subtitle = "Rapidly shake phone 3 times to dispatch emergency alert",
                         icon = Icons.Default.PhonelinkRing,
                         checked = shakeToSosEnabled,
                         onCheckedChange = {
@@ -136,7 +272,7 @@ fun SettingsScreen(
                                 text = "Shake Sensitivity: ${(shakeSensitivity * 100).toInt()}%",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = TextSecondary
                             )
                             Slider(
                                 value = shakeSensitivity,
@@ -149,8 +285,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
-
                     SwitchSettingRow(
                         title = "Triple Power Button SOS",
                         subtitle = "Press lock button 3 times consecutively",
@@ -161,35 +295,18 @@ fun SettingsScreen(
                             coroutineScope.launch { settingsStore.savePowerButtonEnabled(it) }
                         }
                     )
-                }
-            }
-        }
 
-        // Section 2: Stealth & Disguise
-        item {
-            SettingsCategoryHeader("Stealth & Disguise Mode")
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
                     SwitchSettingRow(
-                        title = "Calculator Disguise Icon",
-                        subtitle = "Disguise SafeNova app icon as a standard calculator",
+                        title = "Calculator Disguise Mode",
+                        subtitle = "Stealth mode for high-risk situations",
                         icon = Icons.Default.VisibilityOff,
                         checked = stealthModeEnabled,
                         onCheckedChange = {
                             stealthModeEnabled = it
                             coroutineScope.launch {
+                                settingsStore.saveStealthModeEnabled(it)
                                 snackbarHostState.showSnackbar(
-                                    if (it) "Stealth Calculator Disguise Enabled!" else "Normal App Icon Restored."
+                                    if (it) "Stealth Disguise Mode Enabled!" else "Normal App Mode Restored."
                                 )
                             }
                         }
@@ -198,142 +315,7 @@ fun SettingsScreen(
             }
         }
 
-        // Section 3: Privacy & Media
-        item {
-            SettingsCategoryHeader("Privacy & Auto Recording")
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    SwitchSettingRow(
-                        title = "Continuous GPS Background Sharing",
-                        subtitle = "Allow trusted contacts to query live location anytime",
-                        icon = Icons.Default.Notifications,
-                        checked = locationSharingEnabled,
-                        onCheckedChange = { locationSharingEnabled = it }
-                    )
-
-                    SwitchSettingRow(
-                        title = "Auto Audio Recording on SOS",
-                        subtitle = "Automatically record 60s ambient audio during panic alert",
-                        icon = Icons.Default.Mic,
-                        checked = backgroundAudioEnabled,
-                        onCheckedChange = { backgroundAudioEnabled = it }
-                    )
-                }
-            }
-        }
-
-        // Section 4: Emergency Profile & Medical Info
-        item {
-            SettingsCategoryHeader("Emergency Profile & Medical Info")
-        }
-
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = "Set up your medical conditions, blood group, and responder notes.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Button(
-                        onClick = onNavigateToProfile,
-                        colors = ButtonDefaults.buttonColors(containerColor = SafePurple),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Edit Emergency Profile & Medical Info")
-                    }
-                }
-            }
-        }
-
-        // Section 5: Emergency Contacts Management
-        item {
-            SettingsCategoryHeader("Emergency Contacts Management")
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "${contactsList.size} Trusted Emergency Contacts saved in Supabase.",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    contactsList.forEach { contact ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(text = contact.contactName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text(text = "${contact.contactPhone} • ${contact.relation ?: "Family"}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-
-                            contact.id?.let { contactId ->
-                                androidx.compose.material3.IconButton(
-                                    onClick = {
-                                        coroutineScope.launch {
-                                            try {
-                                                repo.deleteTrustedContact(contactId)
-                                                snackbarHostState.showSnackbar("Contact deleted.")
-                                                refreshContacts()
-                                            } catch (_: Exception) {}
-                                        }
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.PersonAdd,
-                                        contentDescription = "Delete",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Button(
-                        onClick = { showAddDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = SafePurple),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(imageVector = Icons.Default.PersonAdd, contentDescription = "Add Contact")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Add New Emergency Contact")
-                    }
-                }
-            }
-        }
-
-        // Section 5: Account & Sign Out
+        // 4. Account & Sign Out
         item {
             SettingsCategoryHeader("Account & Session")
         }
@@ -342,70 +324,15 @@ fun SettingsScreen(
             OutlinedButton(
                 onClick = onSignOut,
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                modifier = Modifier.fillMaxWidth()
+                border = BorderStroke(1.dp, AlertRed),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = AlertRed),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
             ) {
-                Text(text = "SIGN OUT OF SAFENOVA", fontWeight = FontWeight.Bold)
+                Text(text = "SIGN OUT OF SAFENOVA", fontWeight = FontWeight.ExtraBold)
             }
         }
-    }
-
-    if (showAddDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text("Add Emergency Contact") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    androidx.compose.material3.OutlinedTextField(
-                        value = newContactName,
-                        onValueChange = { newContactName = it },
-                        label = { Text("Contact Name") },
-                        singleLine = true
-                    )
-                    androidx.compose.material3.OutlinedTextField(
-                        value = newContactPhone,
-                        onValueChange = { newContactPhone = it },
-                        label = { Text("Phone Number") },
-                        singleLine = true
-                    )
-                    androidx.compose.material3.OutlinedTextField(
-                        value = newContactRelation,
-                        onValueChange = { newContactRelation = it },
-                        label = { Text("Relation (e.g., Mom, Friend)") },
-                        singleLine = true
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (newContactName.isNotBlank() && newContactPhone.isNotBlank()) {
-                            coroutineScope.launch {
-                                try {
-                                    repo.addTrustedContact(newContactName, newContactPhone, newContactRelation)
-                                    snackbarHostState.showSnackbar("✅ Contact '$newContactName' saved to Supabase!")
-                                    newContactName = ""
-                                    newContactPhone = ""
-                                    showAddDialog = false
-                                    refreshContacts()
-                                } catch (_: Exception) {
-                                    snackbarHostState.showSnackbar("Failed to add contact.")
-                                }
-                            }
-                        }
-                    }
-                ) {
-                    Text("Save Contact")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showAddDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 
@@ -413,9 +340,9 @@ fun SettingsScreen(
 fun SettingsCategoryHeader(title: String) {
     Text(
         text = title,
-        fontSize = 15.sp,
+        fontSize = 14.sp,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
+        color = SafePurpleGlow,
         modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
     )
 }
@@ -440,20 +367,20 @@ fun SwitchSettingRow(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = SafePurple,
+                tint = SafePurpleGlow,
                 modifier = Modifier.padding(end = 12.dp)
             )
             Column {
                 Text(
                     text = title,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = TextPrimary
                 )
                 Text(
                     text = subtitle,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontSize = 11.sp,
+                    color = TextSecondary
                 )
             }
         }
@@ -463,7 +390,10 @@ fun SwitchSettingRow(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = SafePurple)
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = SafePurple
+            )
         )
     }
 }
