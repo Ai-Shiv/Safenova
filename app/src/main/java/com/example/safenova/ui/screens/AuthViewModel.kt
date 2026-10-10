@@ -31,10 +31,14 @@ class AuthViewModel : ViewModel() {
             try {
                 val session = SupabaseManager.auth.currentSessionOrNull()
                 isAuthenticated = session != null
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 isAuthenticated = false
             }
         }
+    }
+
+    fun clearError() {
+        error = null
     }
 
     fun signUp(emailInput: String, passwordInput: String, fullName: String) {
@@ -51,7 +55,12 @@ class AuthViewModel : ViewModel() {
                 }
                 isAuthenticated = true
             } catch (e: Exception) {
-                error = e.localizedMessage ?: "Sign up failed. Please check your network and credentials."
+                val msg = e.localizedMessage ?: e.message ?: "Sign up error"
+                if (msg.contains("API", ignoreCase = true) || msg.contains("401") || msg.contains("Unauthorized")) {
+                    error = "Supabase Key/Network Error: Please check your Supabase Anon Key in SupabaseManager.kt, or use Demo Mode."
+                } else {
+                    error = msg
+                }
             } finally {
                 loading = false
             }
@@ -69,11 +78,21 @@ class AuthViewModel : ViewModel() {
                 }
                 isAuthenticated = true
             } catch (e: Exception) {
-                error = e.localizedMessage ?: "Sign in failed. Please check your credentials."
+                val msg = e.localizedMessage ?: e.message ?: "Sign in error"
+                if (msg.contains("API", ignoreCase = true) || msg.contains("401") || msg.contains("Unauthorized")) {
+                    error = "Invalid Supabase Key: Please replace SUPABASE_KEY in SupabaseManager.kt with your Project Anon Key (from Settings -> API), or use Demo Mode."
+                } else {
+                    error = msg
+                }
             } finally {
                 loading = false
             }
         }
+    }
+
+    fun continueAsGuest() {
+        error = null
+        isAuthenticated = true
     }
 
     fun signOut() {

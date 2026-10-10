@@ -39,7 +39,13 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,6 +70,26 @@ fun HomeScreen(
     snackbarHostState: SnackbarHostState
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val repo = androidx.compose.runtime.remember { com.example.safenova.data.repo.SafeNovaRepository() }
+
+    var userName by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("User") }
+    var contactsCount by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        try {
+            val profile = repo.fetchUserProfile()
+            if (profile != null && profile.fullName.isNotBlank()) {
+                userName = profile.fullName
+            } else {
+                val email = repo.getCurrentUserEmail()
+                if (!email.isNullOrBlank()) {
+                    userName = email.substringBefore("@").capitalize()
+                }
+            }
+            val contacts = repo.fetchTrustedContacts()
+            contactsCount = contacts.size
+        } catch (_: Exception) {}
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -97,7 +123,7 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "Welcome, Sarah",
+                                text = "Welcome, $userName",
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -110,7 +136,7 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "GPS Tracking Active • 3 Emergency Contacts Ready",
+                        text = "GPS Tracking Active • $contactsCount Emergency Contact${if (contactsCount == 1) "" else "s"} Saved",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -319,6 +345,16 @@ fun HomeScreen(
         // Links to all requested feature pages
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Safety Map
+                FeatureCard(
+                    title = "Safety Map & Navigation",
+                    description = "Interactive GPS map, safety-aware routes & incident markers",
+                    icon = Icons.Default.Explore,
+                    accentColor = SafeGreen,
+                    badgeText = "MAP",
+                    onClick = { onNavigate(Screen.Map) }
+                )
+
                 // 1. SOS Page
                 FeatureCard(
                     title = "SOS Emergency Trigger",

@@ -7,11 +7,8 @@ import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
 
 object SupabaseManager {
-    // Replace with your Supabase Project URL from https://supabase.com/dashboard/project/.../settings/api
     const val SUPABASE_URL = "https://wjtyegbvqubxtujruifo.supabase.co"
-    
-    // Replace with your Supabase Anon API Key from Dashboard -> Settings -> API
-    const val SUPABASE_KEY = "sb_secret_mUiFKY4jzLb0LSDkck1GDw_8x-gCVVy"
+    const val SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY_HERE"
 
     val client by lazy {
         createSupabaseClient(

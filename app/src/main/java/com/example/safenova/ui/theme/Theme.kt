@@ -1,51 +1,36 @@
 package com.example.safenova.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
-    error = AlertRed,
-    background = DarkBackground,
-    surface = DarkCardBg
-)
-
-private val LightColorScheme = lightColorScheme(
+private val SafeNovaDarkColorScheme = darkColorScheme(
     primary = SafePurple,
-    secondary = PurpleGrey40,
+    onPrimary = Color.White,
+    primaryContainer = SafeDarkPurple,
+    onPrimaryContainer = Purple80,
+    secondary = Pink80,
+    onSecondary = Color.Black,
     tertiary = SafeRose,
     error = AlertRed,
-    background = CardBgLight,
-    surface = CardBgLight
+    onError = Color.White,
+    background = DarkBackground,
+    onBackground = Color(0xFFF3F4F6),
+    surface = CinnamonSurface,
+    onSurface = Color(0xFFF3F4F6),
+    surfaceVariant = DarkCardBg,
+    onSurfaceVariant = Color(0xFF9CA3AF)
 )
 
 @Composable
 fun SAFENOVATheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Set false to preserve SafeNova brand colors
+    darkTheme: Boolean = true, // Force Dark Mode
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = SafeNovaDarkColorScheme,
         typography = Typography,
         content = content
     )

@@ -61,8 +61,16 @@ fun SosScreen(
     snackbarHostState: SnackbarHostState
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val repo = remember { com.example.safenova.data.repo.SafeNovaRepository() }
     var isSirenPlaying by remember { mutableStateOf(false) }
     var isSilentAlertSent by remember { mutableStateOf(false) }
+    var trustedContactsList by remember { mutableStateOf<List<com.example.safenova.data.models.TrustedContact>>(emptyList()) }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        try {
+            trustedContactsList = repo.fetchTrustedContacts()
+        } catch (_: Exception) {}
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -123,7 +131,15 @@ fun SosScreen(
                                 val coords = locationClient.getCurrentLocation()
                                 val repo = com.example.safenova.data.repo.SafeNovaRepository()
                                 repo.triggerSosAlert(coords.latitude, coords.longitude)
-                                snackbarHostState.showSnackbar("🚨 SOS & LIVE TRACKING SERVICE ACTIVATED! GPS Monitored background service running.")
+
+                                // Dispatch Emergency SMS Intent
+                                val smsIntent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                    data = android.net.Uri.parse("smsto:")
+                                    putExtra("sms_body", "🚨 EMERGENCY SOS! I need immediate help. My current live GPS location: https://maps.google.com/?q=${coords.latitude},${coords.longitude}")
+                                }
+                                context.startActivity(smsIntent)
+
+                                snackbarHostState.showSnackbar("🚨 SOS & LIVE TRACKING ACTIVATED! Dispatched to Supabase & SMS app.")
                             } catch (e: Exception) {
                                 snackbarHostState.showSnackbar("🚨 EMERGENCY ALERT ACTIVATED!")
                             }
@@ -259,7 +275,7 @@ fun SosScreen(
         // Active Emergency Contacts List
         item {
             Text(
-                text = "Emergency Contacts (3 Active)",
+                text = "Emergency Contacts (${trustedContactsList.size} Active)",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -281,9 +297,21 @@ fun SosScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    ContactItem(name = "Mom (Primary Contact)", phone = "+1 (555) 019-2834", relation = "Family")
-                    ContactItem(name = "Jessica Miller", phone = "+1 (555) 012-9847", relation = "Sister")
-                    ContactItem(name = "David - Roommate", phone = "+1 (555) 018-3342", relation = "Friend")
+                    if (trustedContactsList.isEmpty()) {
+                        Text(
+                            text = "No custom emergency contacts added yet. Go to Settings -> Emergency Contacts to add family & friends.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        trustedContactsList.forEach { contact ->
+                            ContactItem(
+                                name = contact.contactName,
+                                phone = contact.contactPhone,
+                                relation = contact.relation ?: "Trusted Contact"
+                            )
+                        }
+                    }
                 }
             }
         }

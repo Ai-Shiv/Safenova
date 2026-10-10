@@ -51,11 +51,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     snackbarHostState: SnackbarHostState,
-    onSignOut: () -> Unit = {}
+    onSignOut: () -> Unit = {},
+    onNavigateToProfile: () -> Unit = {}
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
     val settingsStore = remember { com.example.safenova.data.SettingsDataStore(context) }
+    val repo = remember { com.example.safenova.data.repo.SafeNovaRepository() }
 
     var shakeToSosEnabled by remember { mutableStateOf(true) }
     var shakeSensitivity by remember { mutableFloatStateOf(0.7f) }
@@ -63,6 +65,24 @@ fun SettingsScreen(
     var stealthModeEnabled by remember { mutableStateOf(false) }
     var backgroundAudioEnabled by remember { mutableStateOf(true) }
     var locationSharingEnabled by remember { mutableStateOf(true) }
+
+    var contactsList by remember { mutableStateOf<List<com.example.safenova.data.models.TrustedContact>>(emptyList()) }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var newContactName by remember { mutableStateOf("") }
+    var newContactPhone by remember { mutableStateOf("") }
+    var newContactRelation by remember { mutableStateOf("Family") }
+
+    fun refreshContacts() {
+        coroutineScope.launch {
+            try {
+                contactsList = repo.fetchTrustedContacts()
+            } catch (_: Exception) {}
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        refreshContacts()
+    }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         settingsStore.shakeSosEnabled.collect { shakeToSosEnabled = it }
@@ -212,7 +232,40 @@ fun SettingsScreen(
             }
         }
 
-        // Section 4: Emergency Contacts Management
+        // Section 4: Emergency Profile & Medical Info
+        item {
+            SettingsCategoryHeader("Emergency Profile & Medical Info")
+        }
+
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Set up your medical conditions, blood group, and responder notes.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Button(
+                        onClick = onNavigateToProfile,
+                        colors = ButtonDefaults.buttonColors(containerColor = SafePurple),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Edit Emergency Profile & Medical Info")
+                    }
+                }
+            }
+        }
+
+        // Section 5: Emergency Contacts Management
         item {
             SettingsCategoryHeader("Emergency Contacts Management")
         }
@@ -228,17 +281,46 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "3 Trusted Emergency Contacts saved.",
+                        text = "${contactsList.size} Trusted Emergency Contacts saved in Supabase.",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Button(
-                        onClick = {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar("Opening Phone Contact Picker...")
+                    contactsList.forEach { contact ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = contact.contactName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(text = "${contact.contactPhone} • ${contact.relation ?: "Family"}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                        },
+
+                            contact.id?.let { contactId ->
+                                androidx.compose.material3.IconButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            try {
+                                                repo.deleteTrustedContact(contactId)
+                                                snackbarHostState.showSnackbar("Contact deleted.")
+                                                refreshContacts()
+                                            } catch (_: Exception) {}
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PersonAdd,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = { showAddDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = SafePurple),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -268,6 +350,62 @@ fun SettingsScreen(
                 Text(text = "SIGN OUT OF SAFENOVA", fontWeight = FontWeight.Bold)
             }
         }
+    }
+
+    if (showAddDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showAddDialog = false },
+            title = { Text("Add Emergency Contact") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = newContactName,
+                        onValueChange = { newContactName = it },
+                        label = { Text("Contact Name") },
+                        singleLine = true
+                    )
+                    androidx.compose.material3.OutlinedTextField(
+                        value = newContactPhone,
+                        onValueChange = { newContactPhone = it },
+                        label = { Text("Phone Number") },
+                        singleLine = true
+                    )
+                    androidx.compose.material3.OutlinedTextField(
+                        value = newContactRelation,
+                        onValueChange = { newContactRelation = it },
+                        label = { Text("Relation (e.g., Mom, Friend)") },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newContactName.isNotBlank() && newContactPhone.isNotBlank()) {
+                            coroutineScope.launch {
+                                try {
+                                    repo.addTrustedContact(newContactName, newContactPhone, newContactRelation)
+                                    snackbarHostState.showSnackbar("✅ Contact '$newContactName' saved to Supabase!")
+                                    newContactName = ""
+                                    newContactPhone = ""
+                                    showAddDialog = false
+                                    refreshContacts()
+                                } catch (_: Exception) {
+                                    snackbarHostState.showSnackbar("Failed to add contact.")
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text("Save Contact")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showAddDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

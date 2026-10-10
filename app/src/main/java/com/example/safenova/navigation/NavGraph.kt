@@ -50,6 +50,8 @@ fun SafeNovaNavGraph(
         Screen.FindShelters.route -> Screen.FindShelters.title
         Screen.EscortRide.route -> Screen.EscortRide.title
         Screen.EmergencyPin.route -> Screen.EmergencyPin.title
+        Screen.EmergencyProfile.route -> Screen.EmergencyProfile.title
+        Screen.Map.route -> Screen.Map.title
         else -> "SafeNova"
     }
 
@@ -100,8 +102,13 @@ fun SafeNovaNavGraph(
             composable(Screen.Settings.route) {
                 SettingsScreen(
                     snackbarHostState = snackbarHostState,
-                    onSignOut = { authViewModel.signOut() }
+                    onSignOut = { authViewModel.signOut() },
+                    onNavigateToProfile = { navController.navigate(Screen.EmergencyProfile.route) }
                 )
+            }
+
+            composable(Screen.EmergencyProfile.route) {
+                com.example.safenova.ui.screens.EmergencyProfileScreen(snackbarHostState = snackbarHostState)
             }
 
             composable(Screen.CrimeReport.route) {
@@ -122,6 +129,10 @@ fun SafeNovaNavGraph(
 
             composable(Screen.EmergencyPin.route) {
                 EmergencyPinScreen(snackbarHostState = snackbarHostState)
+            }
+
+            composable(Screen.Map.route) {
+                com.example.safenova.ui.screens.MapScreen(snackbarHostState = snackbarHostState)
             }
         }
     }

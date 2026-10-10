@@ -21,4 +21,6 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object FindShelters : Screen("find_shelters", "Find Shelters", Icons.Default.NightShelter)
     object EscortRide : Screen("escort_ride", "Find Escort Ride", Icons.Default.DirectionsCar)
     object EmergencyPin : Screen("emergency_pin", "Emergency PIN", Icons.Default.Lock)
+    object EmergencyProfile : Screen("emergency_profile", "Emergency Medical Profile", Icons.Default.Lock)
+    object Map : Screen("map", "Safety Map & Routes", Icons.Default.Explore)
 }

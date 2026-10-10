@@ -22,6 +22,10 @@ class SafeNovaRepository {
         auth.currentUserOrNull()?.id
     }
 
+    suspend fun getCurrentUserEmail(): String? = withContext(Dispatchers.IO) {
+        auth.currentUserOrNull()?.email
+    }
+
     // Incidents & Crime Reports
     suspend fun submitIncidentReport(report: IncidentReport) = withContext(Dispatchers.IO) {
         db.from("incident_reports").insert(report)
@@ -67,6 +71,24 @@ class SafeNovaRepository {
         db.from("safe_places").select().decodeList<SafePlace>()
     }
 
+    // User Profile
+    suspend fun fetchUserProfile(): UserProfile? = withContext(Dispatchers.IO) {
+        val userId = getCurrentUserId() ?: return@withContext null
+        try {
+            db.from("profiles").select {
+                filter {
+                    eq("id", userId)
+                }
+            }.decodeSingleOrNull<UserProfile>()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun updateUserProfile(profile: UserProfile) = withContext(Dispatchers.IO) {
+        db.from("profiles").upsert(profile)
+    }
+
     // Trusted Contacts
     suspend fun addTrustedContact(name: String, phone: String, relation: String) = withContext(Dispatchers.IO) {
         val userId = getCurrentUserId() ?: throw IllegalStateException("User not logged in")
@@ -77,6 +99,14 @@ class SafeNovaRepository {
             relation = relation
         )
         db.from("trusted_contacts").insert(contact)
+    }
+
+    suspend fun deleteTrustedContact(contactId: String) = withContext(Dispatchers.IO) {
+        db.from("trusted_contacts").delete {
+            filter {
+                eq("id", contactId)
+            }
+        }
     }
 
     suspend fun fetchTrustedContacts(): List<TrustedContact> = withContext(Dispatchers.IO) {
