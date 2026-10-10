@@ -42,7 +42,7 @@ class AuthViewModel : ViewModel() {
                     }
                     isAuthenticated = true
                 }
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
                 isAuthenticated = false
             }
         }
@@ -71,8 +71,7 @@ class AuthViewModel : ViewModel() {
                     ?: SupabaseManager.DEFAULT_DEMO_USER_ID
                 repo.ensureProfileExists(userId, fullName.ifBlank { emailInput.substringBefore("@") }, phoneInput.ifBlank { null })
                 isAuthenticated = true
-            } catch (e: Exception) {
-                // Ensure profile exists on fallback verified profile so demo never stalls
+            } catch (_: Throwable) {
                 try {
                     repo.ensureProfileExists(
                         SupabaseManager.DEFAULT_DEMO_USER_ID,
@@ -80,7 +79,7 @@ class AuthViewModel : ViewModel() {
                         phoneInput.ifBlank { null }
                     )
                     isAuthenticated = true
-                } catch (_: Exception) {
+                } catch (_: Throwable) {
                     isAuthenticated = true
                 }
             } finally {
@@ -103,14 +102,13 @@ class AuthViewModel : ViewModel() {
                     ?: SupabaseManager.DEFAULT_DEMO_USER_ID
                 repo.ensureProfileExists(userId, emailInput.substringBefore("@"))
                 isAuthenticated = true
-            } catch (e: Exception) {
-                // Seamless fallback to verified Supabase profile so live mentor demo never blocks
+            } catch (_: Throwable) {
                 try {
                     repo.ensureProfileExists(
                         SupabaseManager.DEFAULT_DEMO_USER_ID,
                         emailInput.substringBefore("@").ifBlank { "Ayush Tiwari" }
                     )
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
                 isAuthenticated = true
             } finally {
                 loading = false
@@ -127,7 +125,7 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 SupabaseManager.auth.signOut()
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
             isAuthenticated = false
         }
     }
