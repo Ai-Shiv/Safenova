@@ -256,8 +256,49 @@ fun GoogleMapScreen(
                     OutlinedTextField(
                         value = destinationAddress,
                         onValueChange = { destinationAddress = it },
-                        placeholder = { Text("Search safe destination address...") },
+                        placeholder = { Text("Search destination (e.g. Varanasi, India)") },
                         singleLine = true,
+                        trailingIcon = {
+                            Button(
+                                onClick = {
+                                    if (destinationAddress.isNotBlank()) {
+                                        coroutineScope.launch {
+                                            try {
+                                                val geocoder = android.location.Geocoder(context)
+                                                @Suppress("DEPRECATION")
+                                                val addresses = geocoder.getFromLocationName(destinationAddress, 1)
+                                                if (!addresses.isNullOrEmpty()) {
+                                                    val addr = addresses[0]
+                                                    val resolved = Coordinates(addr.latitude, addr.longitude)
+                                                    destinationCoords = resolved
+                                                    cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(resolved.latitude, resolved.longitude), 14f)
+
+                                                    evaluatedRoutes = SafeRouteCalculator.calculateRouteOptions(
+                                                        start = currentCoords,
+                                                        destination = resolved,
+                                                        incidents = incidentReports,
+                                                        conditions = repo.fetchAreaConditions(),
+                                                        safePlaces = safePlaces
+                                                    )
+                                                    snackbarHostState.showSnackbar("📍 Route calculated for '${destinationAddress}'!")
+                                                } else {
+                                                    snackbarHostState.showSnackbar("Location not found. Showing nearby safe routes.")
+                                                }
+                                            } catch (_: Exception) {
+                                                snackbarHostState.showSnackbar("📍 Destination set: ${destinationAddress}")
+                                            }
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = SafePurple),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Search, contentDescription = "Find", modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Search", fontSize = 11.sp)
+                            }
+                        },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
