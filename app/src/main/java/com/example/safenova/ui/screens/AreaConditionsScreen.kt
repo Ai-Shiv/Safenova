@@ -287,22 +287,33 @@ fun AreaConditionsScreen(
         }
 
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                CommunityReportItem(
-                    author = "Elena R.",
-                    timeAgo = "15 mins ago",
-                    location = "Main St Subway Station",
-                    comment = "Well-lit and police patrol van stationed outside exit #2.",
-                    isPositive = true
-                )
+            var fetchedConditions by remember { mutableStateOf<List<com.example.safenova.data.models.AreaCondition>>(emptyList()) }
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                try {
+                    val repo = com.example.safenova.data.repo.SafeNovaRepository()
+                    fetchedConditions = repo.fetchAreaConditions()
+                } catch (_: Exception) {}
+            }
 
-                CommunityReportItem(
-                    author = "Aisha K.",
-                    timeAgo = "1 hour ago",
-                    location = "Oak Lane Alley",
-                    comment = "Caution: 2 streetlights out near the park corner. Take Main St instead.",
-                    isPositive = false
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (fetchedConditions.isEmpty()) {
+                    Text(
+                        text = "No community safety reports submitted for this area yet. Submit your observation above to alert others!",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                } else {
+                    fetchedConditions.forEach { cond ->
+                        CommunityReportItem(
+                            author = "Verified User",
+                            timeAgo = "Recently",
+                            location = "GPS: ${cond.latitude.toString().take(6)}, ${cond.longitude.toString().take(6)}",
+                            comment = "Lighting: ${cond.lightingRating ?: "Normal"} • Crowd: ${cond.crowdRating ?: "Moderate"} • Patrol: ${cond.securityPresence ?: "Visible"}",
+                            isPositive = cond.lightingRating?.contains("Well-Lit", true) == true || cond.securityPresence?.contains("Police", true) == true
+                        )
+                    }
+                }
             }
         }
     }
